@@ -1,9 +1,23 @@
 <!DOCTYPE html>
 <html>
 
+<script>
+    MathJax = {
+        tex: {
+            inlineMath: [['$', '$'], ['\\(', '\\)']]
+        }
+    };
+</script>
+
+<script async src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-mml-chtml.js"></script>
+
 <head>
     <title>TRIP50 Benchmarking</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css">
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 </head>
 
 <body>
@@ -17,7 +31,7 @@
             Benchmarking Kinetic and Thermodynamic Reaction Predictions for Triplet Reactivity
         </div>
 
-        <a href="https://patonlab.com">
+        <a href="https://patonlab.com" target="_blank">
             <img src="images/paton-lab-logo.jpeg" class="logo">
         </a>
 
@@ -33,17 +47,18 @@
     </p>
 
     <div class="buttons">
-        <a href="https://github.com/Russellwolfe0/TRIP50-benchmarking" class="button">
+        <a href="https://github.com/Russellwolfe0/TRIP50-benchmarking" class="button" target="_blank">
             GitHub
+        </a>
+
+        <a href="https://pubs.acs.org/jctcce/article/22/7/3530/5149845/Fundamental-Study-of-Density-Functional-Theory" class="button" target="_blank">
+            Original TRIP-50 Paper
         </a>
 
         <a href="#results" class="button">
             Results
         </a>
 
-        <a href="#methods" class="button">
-            Methods
-        </a>
     </div>
     </div>
 
@@ -54,90 +69,257 @@
     <h2>Overview</h2>
 
     <p>
-    More in depth overview of project...
+        There have recently been the development of many triplet transformations 
+        in organic chemistry. Because of their short lifetime, mechanistic studies 
+        rely highly on computation. In the original <a href="https://pubs.acs.org/jctcce/article/22/7/3530/5149845/Fundamental-Study-of-Density-Functional-Theory">TRIP-50</a> 
+        paper, benchmarking was established using a variety of density functional 
+        theory (DFT) methods.<sup><a href="#ref1">[1]</a></sup> A test set of 50 organic reactions was used to compute
+        barrier heights and thermodynamic values using 45 functionals. It was found
+        that range-separated hybrid functionals outperformed non-range-separated versions,
+        and the best-performing single hybrid functionals were &omega;M06-D3, &omega;B97M,
+        M06-2X-D3, and M05-2X-D3 for a balance of high accuracy and computational efficiency.
+        <sup><a href="#ref2">[2]</a></sup><sup><a href="#ref3">[3]</a></sup><sup><a href="#ref4">[4]</a></sup><sup><a href="#ref5">[5]</a></sup>
+    </p>
+    <p>
+        In this project, I'm expanding on this work by benchmarking the TRIP50 dataset 
+        using a variety of semi-empirical and machine-learning models. To begin,I selected 
+        the highest performing from each category of functional as tested in the original 
+        benchmarking. Then, I benchmarked using the models listed in the "models tested" 
+        section.
     </p>
 
 </section>
 
-<section>
+<section id="models">
+
     <h2>Models Tested</h2>
 
-        <h3>"Ground Truth" Reference</h3>
-            <ul>
-                <li>DLPNO-CCSD(T)/CBS(3,4)</li>
-            </ul>
+    <h3>Reference Standard</h3>
+    <p>DLPNO-CCSD(T)/CBS </p>
+    <p>Used as the benchmark for all reported errors.</p>
+    
+    <div class="model-grid">
+    
+        <div class="model-card dft" onclick="toggleCard('dft-list','dft-arrow')">
+            <div class="card-header">
+                <h3>DFT</h3>
+                <span id="dft-arrow" class="arrow">▼</span>
+            </div>
 
-        <h3>DFT Methods</h3>
-            <ul>
-                <li>B2GP-PLYP-D4</li>
-                <li>M06D4</li>
-                <li>B97M-V</li>
-                <li>&omega;B97M-V</li>
-                <li>B3PW91-D4</li>
-                <li>M06-2X-D30</li>
-                <li>OLYP-D3BJ</li>
-                <li>r2SCAN-3c</li>
-            </ul>
+            <p>8 methods</p>
+            <div id="dft-list" class="card-content">
+                <p>All using def2-QZVPP basis set</p>
+                <ul>
+                    <li>B2GP-PLYP-D4</li>
+                    <li>M06-D4</li>
+                    <li>B97M-V</li>
+                    <li>&omega;B97M-V</li>
+                    <li>B3PW91-D4</li>
+                    <li>M06-2x-D3(0)</li>
+                    <li>OLYP-D3BJ</li>
+                    <li>r2SCAN-3c</li>
+                </ul>
+            </div>
+        </div>
+    
+        <div class="model-card se" onclick="toggleCard('se-list','se-arrow')">
+            <div class="card-header">
+                <h3>Semi-Empirical</h3>
+                <span id="se-arrow" class="arrow">▼</span>
+            </div>
 
-        <h3>Semi-Empirical Methods</h3>
-            <ul>
-                <li>g-xTB</li>
-                <li>GFN0-xTB</li>
-                <li>GFN-xTB</li>
-                <li>GFN2-xTB</li>
-                <li>GFN-FF</li>
-                <li>AM1</li>
-                <li>MNDO</li>
-                <li>PM3</li>
-            </ul>
+            <p>
+                8 methods
+            </p>
+            <div id="se-list" class="card-content">
+                <ul>
+                    <li>g-xTB</li>
+                    <li>GFN0-xTB</li>
+                    <li>GFN1-xTB</li>
+                    <li>GFN2-xTB</li>
+                    <li>GFN-FF</li>
+                    <li>AM1</li>
+                    <li>MNDO</li>
+                    <li>PM3</li>
+                </ul>
+            </div>
+        </div>
+    
+        <div class="model-card ml" onclick="toggleCard('ml-list','ml-arrow')">
+            <div class="card-header">
+                <h3>Machine Learning</h3>
+                <span id="ml-arrow" class="arrow">▼</span>
+            </div>
 
-        <h3>MLIP Methods</h3>
-            <ul>
-                <li>Fairchem</li>
-                    <ul>
-                        <li>AllScAIP-md (Direct and Conserving)</li>
-                        <li>eSEN</li>
-                            <ul>
-                                <li>SM (Direct and Conserving)</li>
-                                <li>MD(Direct)</li>
-                            </ul>
-                    </ul>
-                <li>MACE</li>
-                    <ul>
-                        <li>MP (Large, Medium, and Small)</li>
-                        <li>OFF (Large, Medium, and Small)</li>
-                        <li>OMOL</li>
-                        <li>ANICC</li>
-                    </ul>
-                <li>Mattersim</li>
-                    <ul>
-                        <li>1M</li>
-                        <li>5M</li>
-                    </ul>
-                <li>Orb-V3</li>
-                    <ul>
-                        <li>Diret and Conserving</li>
-                        <li>20 and Inf</li>
-                        <li>OMAT and MPA</li>
-                    </ul>
-            </ul>
+            <p>
+                23 methods
+            </p>
+            <div id="ml-list" class="card-content">
+                <div class="sub-card" onclick="event.stopPropagation(); toggleCard('fairchem-list','fairchem-arrow')">
+                    <div class="sub-header">
+                        <h4>Fairchem (5)</h4>
+                        <span id="fairchem-arrow" class="arrow">▼</span>
+                    </div>
+                </div>
 
-</section>    
+                <div id="fairchem-list" class="card-content">
+                    <ul>
+                        <li>AllScAIP-md Conserving</li>
+                        <li>AllScAIP-md Direct</li>
+                        <li>eSEN-sm Conserving</li>
+                        <li>eSEN-sm Direct</li>
+                        <li>eSEN-md Direct</li>
+                    </ul>
+                </div>
+
+                <div class="sub-card" onclick="event.stopPropagation(); toggleCard('mace-list','mace-arrow')">
+                    <div class="sub-header">
+                        <h4>MACE (8)</h4>
+                        <span id="mace-arrow" class="arrow">▼</span>
+                    </div>
+                </div>
+
+                <div id="mace-list" class="card-content">
+                    <ul>
+                        <li>MACE-MP-large</li>
+                        <li>MACE-MP-medium</li>
+                        <li>MACE-MP-small</li>
+                        <li>MACE-OFF-large</li>
+                        <li>MACE-OFF-medium</li>
+                        <li>MACE-MP-small</li>
+                        <li>MACE-OMOL</li>
+                        <li>MACE-ANICC</li>
+                    </ul>
+                </div>
+
+                <div class="sub-card" onclick="event.stopPropagation(); toggleCard('msim-list','msim-arrow')">
+                    <div class="sub-header">
+                        <h4>Mattersium (2)</h4>
+                        <span id="msim-arrow" class="arrow">▼</span>
+                    </div>
+                </div>
+
+                <div id="msim-list" class="card-content">
+                    <ul>
+                        <li>Mattersim-1M</li>
+                        <li>Mattersim-5M</li>
+                    </ul>
+                </div>
+
+                <div class="sub-card" onclick="event.stopPropagation(); toggleCard('orb-list','orb-arrow')">
+                    <div class="sub-header">
+                        <h4>Orb-V3 (8)</h4>
+                        <span id="orb-arrow" class="arrow">▼</span>
+                    </div>
+                </div>
+
+                <div id="orb-list" class="card-content">
+                    <ul>
+                        <li>ORB-V3-conserving-20-MPA</li>
+                        <li>ORB-V3-conserving-20-OMAT</li>
+                        <li>ORB-V3-conserving-inf-MPA</li>
+                        <li>ORB-V3-conserving-inf-OMAT</li>
+                        <li>ORB-V3-direct-20-MPA</li>
+                        <li>ORB-V3-direct-20-OMAT</li>
+                        <li>ORB-V3-direct-inf-MPA</li>
+                        <li>ORB-V3-direct-inf-OMAT</li>
+                    </ul>
+                </div>
+                
+            </div>
+        </div>
+    
+    </div>
+    
+</section>   
 
 <section id="results">
     <h2>Results</h2>
-        <p>
-            Benchmarking results...
-        </p>
+    <table id="results-table" class="display">
+
+        <thead>
+            <tr>
+                <th>Method</th>
+                <th>Type</th>
+                <th>MAE Thermo</th>
+                <th>MAE Kinetic</th>
+                <th>Sum MAE</th>
+                <th>Average Time (s)</th>
+                <th>Efficiency Score</th>
+            </tr>
+        </thead>
+
+        <tbody>
+        </tbody>
+
+        </table>
+    <h3>Efficiency Score</h3>
+        <p>The manner of calculation for the efficiency score is somewhat arbitrary. 
+        To make a score that is somewhat representative of both time and accuracy,
+        while taking into account the relative magnitudes obtained values, a weightes score
+        was calculated. First, times were normalized as </p> 
+        <p>$$t'=log_{10}(t+1).$$</p>
+        <p>Then, time scores and accuracy scores were calculated as </p>
+        <p>$$\text{Time Score}_{model} = 1 - \displaystyle\left(\frac{t'_{model}-t'_{min}}{t'_{max}-t'_{min}}\right) \hspace{10mm}
+        \text{Accuracy Score}_{model} = 1 - \displaystyle\left(\frac{MAE_{model}-MAE_{min}}{MAE_{max}-MAE_{min}}\right).$$</p>
+        <p>Finally, these were weighted as</p>
+        <p>$$\text{Efficiency Score} = 0.8(Accuracy Score) + 0.2(Time Score)$$</p>
+        <p> to give a final weighted score. These weights were chosen to give more importance to accuracy while still considering time 
+            as a factor.</p>
+
 </section>
 
-<section>
-    <h2>Progress</h2>
+<section id="progress">
+    <h2>Continuing Progress</h2>
 
     <p>
-    Initial benchmarking results are being collected.
+    Initial benchmarking results are being collected. Results are being checked for errors, and calculations are being rerun and collected as needed.
     </p>
 </section>
+
+<section id="references">
+
+    <h2>References</h2>
+    
+    <ol>
+        <li id="ref1">
+            William B. Hughes, Mihai V. Popescu, Robert S. Paton; Fundamental Study 
+            of Density Functional Theory Applied to Triplet State Reactivity: Introduction 
+            of the TRIP50 Data Set. J. Chem. Theory Comput. 14 April 2026; 22 (7): 
+            3530–3542. <a href="https://doi.org/10.1021/acs.jctc.6c00144">https://doi.org/10.1021/acs.jctc.6c00144</a>
+        </li>
+
+        <li id="ref2">
+            You-Sheng Lin, Guan-De Li, Shan-Ping Mao, Jeng-Da Chai; Long-Range Corrected 
+            Hybrid Density Functionals with Improved Dispersion Corrections. J. Chem. 
+            Theory Comput. 8 January 2013; 9 (1): 263–272. <a href="https://doi.org/10.1021/ct300715s">https://doi.org/10.1021/acs.jctc.6c00144</a>
+        </li>
+
+        <li id="ref3">
+            Narbe Mardirossian, Martin Head-Gordon; ωB97M-V: A combinatorially optimized, 
+            range-separated hybrid, meta-GGA density functional with VV10 nonlocal correlation. 
+            J. Chem. Phys. 7 June 2016; 144 (21): 214110. <a href="https://doi.org/10.1063/1.4952647">https://doi.org/10.1063/1.4952647</a>
+        </li>
+
+        <li id="ref4">
+            Zhao, Y., Truhlar, D.G. The M06 suite of density functionals for main group 
+            thermochemistry, thermochemical kinetics, noncovalent interactions, excited 
+            states, and transition elements: two new functionals and systematic testing 
+            of four M06-class functionals and 12 other functionals. Theor Chem Account 
+            120, 215–241 (2008). <a href="https://doi.org/10.1007/s00214-007-0310-x">https://doi.org/10.1007/s00214-007-0310-x</a>
+        </li>
+
+        <li id="ref5">
+            Yan Zhao, Nathan E. Schultz, Donald G. Truhlar; Design of Density Functionals 
+            by Combining the Method of Constraint Satisfaction with Parametrization 
+            for Thermochemistry, Thermochemical Kinetics, and Noncovalent Interactions. 
+            J. Chem. Theory Comput. 14 March 2006; 2 (2): 364–382. <a href="https://doi.org/10.1021/ct0502763">https://doi.org/10.1021/ct0502763</a>
+        </li>
+    </ol>
+    
+</section>
+
+<script src="script.js"></script>
 
 </body>
 
