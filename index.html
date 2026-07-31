@@ -13,6 +13,7 @@
 
 <head>
     <title>TRIP50 Benchmarking</title>
+    <link rel="icon" type="image/jpeg" href="images/paton-lab-logo.jpeg">
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css">
     <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
@@ -64,28 +65,30 @@
 
 </header>
 
-<section>
+<section id="overview">
 
     <h2>Overview</h2>
 
     <p>
-        There have recently been the development of many triplet transformations 
-        in organic chemistry. Because of their short lifetime, mechanistic studies 
-        rely highly on computation. In the original <a href="https://pubs.acs.org/jctcce/article/22/7/3530/5149845/Fundamental-Study-of-Density-Functional-Theory">TRIP-50</a> 
-        paper, benchmarking was established using a variety of density functional 
+        Recent developments in triplet-state organic chemistry have increased he need for 
+        accurate computational methods for describing reaction energies. Because of their 
+        short lifetime, mechanistic studies on open-shell triplet species rely highly on 
+        computation. In the original <a href="https://pubs.acs.org/jctcce/article/22/7/3530/5149845/Fundamental-Study-of-Density-Functional-Theory">TRIP-50</a> 
+        study, benchmarking was established using a variety of density functional 
         theory (DFT) methods.<sup><a href="#ref1">[1]</a></sup> A test set of 50 organic reactions was used to compute
         barrier heights and thermodynamic values using 45 functionals. It was found
         that range-separated hybrid functionals outperformed non-range-separated versions,
-        and the best-performing single hybrid functionals were &omega;M06-D3, &omega;B97M,
+        and the best-performing single hybrid functionals were &omega;M06-D3, &omega;B97M-V,
         M06-2X-D3, and M05-2X-D3 for a balance of high accuracy and computational efficiency.
         <sup><a href="#ref2">[2]</a></sup><sup><a href="#ref3">[3]</a></sup><sup><a href="#ref4">[4]</a></sup><sup><a href="#ref5">[5]</a></sup>
     </p>
     <p>
-        In this project, I'm expanding on this work by benchmarking the TRIP50 dataset 
-        using a variety of semi-empirical and machine-learning models. To begin,I selected 
-        the highest performing from each category of functional as tested in the original 
-        benchmarking. Then, I benchmarked using the models listed in the "models tested" 
-        section.
+        While DFT methods provide accurate prediction, their computation expense limits their 
+        application to large-scale and high-throughput studies. In this project, I'm expanding 
+        on the original TRIP50 benchmarking by evaluating a variety of semi-empirical and 
+        MLIP models. To begin,I selected the highest performing from each category of 
+        functional as tested in the original benchmarking. Then, I benchmarked using the models 
+        listed in the "models tested" section.
     </p>
 
 </section>
@@ -242,7 +245,7 @@
                 <th>Method</th>
                 <th>Type</th>
                 <th>MAE Thermo</th>
-                <th>MAE Kinetic</th>
+                <th>MAE Kinetics</th>
                 <th>Sum MAE</th>
                 <th>Average Time (s)</th>
                 <th>Efficiency Score</th>
@@ -263,9 +266,34 @@
         <p>$$\text{Time Score}_{model} = 1 - \displaystyle\left(\frac{t'_{model}-t'_{min}}{t'_{max}-t'_{min}}\right) \hspace{10mm}
         \text{Accuracy Score}_{model} = 1 - \displaystyle\left(\frac{MAE_{model}-MAE_{min}}{MAE_{max}-MAE_{min}}\right).$$</p>
         <p>Finally, these were weighted as</p>
-        <p>$$\text{Efficiency Score} = 0.8(Accuracy Score) + 0.2(Time Score)$$</p>
+        <p>$$\text{Efficiency Score} = 0.8\cdot(\text{Accuracy Score}) + 0.2\cdot(\text{Time Score})$$</p>
         <p> to give a final weighted score. These weights were chosen to give more importance to accuracy while still considering time 
             as a factor.</p>
+    
+    <h3>Pareto Front</h3>
+        <div class="figure-row">
+
+            <figure>
+                <img src="images/pareto_front.png" alt="Pareto Front">
+                <figcaption>
+                    Figure 1. Pareto front using Sum of MAEs
+                </figcaption>
+            </figure>
+
+            <figure>
+                <img src="images/paretov2_front.png" alt="Efficiency Plot">
+                <figcaption>
+                    Figure 2. Pareto front using scaled MAE
+                </figcaption>
+            </figure>
+        </div>
+
+        <p>The figure on the left shows a pareto front just using MAE<sub>thermo</sub> + MAE<sub>kinetics</sub>. The 
+        figure on the right scales the data as</p>
+        <p>
+            $MAE_{\text{scaled}}=\sqrt{\displaystyle\frac{MAE_{\text{sum}}-MAE_{\text{sum, min}}}{MAE_{\text{sum, max}}-MAE_{\text{sum, min}}}},$
+        </p>
+        <p>as to show more detail for lower MAEs.</p>
 
 </section>
 

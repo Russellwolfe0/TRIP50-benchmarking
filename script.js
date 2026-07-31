@@ -56,6 +56,17 @@ function maeColor(value, min, max) {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
+function efficiencyColor(value, min, max) {
+
+    let t = (value - min) / (max - min);
+
+    t = Math.max(0, Math.min(1, t));
+
+    let hue = 120 * t;
+
+    return `hsl(${hue}, 70%, 90%)`;
+}
+
 document.addEventListener("DOMContentLoaded", function () {
 
     function toggleCard(contentId, arrowId) {
@@ -102,6 +113,8 @@ document.addEventListener("DOMContentLoaded", function () {
             console.log(results.data);  // debugging
 
             let table = new DataTable('#results-table', {
+
+                order: [[6, "desc"]],
 
                 data: results.data,
 
@@ -175,10 +188,10 @@ document.addEventListener("DOMContentLoaded", function () {
                     
                             let value = parseFloat(cellData);
                     
-                            cell.style.backgroundColor = maeColor(
+                            cell.style.backgroundColor = efficiencyColor(
                                 value,
                                 0,
-                                10
+                                1
                             );
                     
                         }
