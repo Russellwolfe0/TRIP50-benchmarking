@@ -58,6 +58,7 @@ plt.scatter(
 
 pareto_df = df.iloc[front].sort_values("log_time")
 
+""" Make Pareto points red
 plt.scatter(
     pareto_df["log_time"],
     pareto_df["MAE_scaled"],
@@ -66,6 +67,30 @@ plt.scatter(
     label="Pareto Front",
     zorder=3
 )
+"""
+
+label_names = {
+    "MLIP": "MLIP",
+    "SE": "Semi-empirical",
+    "DFT": "DFT"
+}
+
+colors = {
+    "MLIP": "blue",
+    "SE": "green",
+    "DFT": "purple"
+}
+
+for category, group in df.groupby("Type"):
+
+    plt.scatter(
+        group["log_time"],
+        group["MAE_scaled"],
+        s=60,
+        alpha=0.7,
+        label=label_names.get(category, category),
+        color=colors.get(category, "gray")
+    )
 
 # Connect Pareto points
 plt.plot(
@@ -81,7 +106,9 @@ plt.plot(
 labels = [
     "eSEN-MD-direct-all-OMOL",
     "Orb-v3-direct-inf-OMAT",
-    "ωB97M-V"
+    "ωB97M-V",
+    "eSEN-SM-direct-all-OMOL",
+    "Orbmol-v1-direct"
 ]
 
 for method in labels:
@@ -100,6 +127,7 @@ for method in labels:
             )
         )
 
+from numpy.polynomial import polynomial as poly
 
 plt.xlabel("log10(Average Time (s))")
 plt.ylabel("MAE_scaled")

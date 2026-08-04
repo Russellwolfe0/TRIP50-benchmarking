@@ -40,27 +40,33 @@ def pareto_front(data):
 
 front = pareto_front(df)
 
-
-
 plt.figure(figsize=(8,6))
 
-plt.scatter(
-    df["log_time"],
-    df["Sum MAE"],
-    alpha=0.7,
-    label="All Methods"
-)
 
 pareto_df = df.iloc[front].sort_values("log_time")
 
-plt.scatter(
-    pareto_df["log_time"],
-    pareto_df["Sum MAE"],
-    color="red",
-    s=80,
-    label="Pareto Front",
-    zorder=3
-)
+label_names = {
+    "MLIP": "MLIP",
+    "SE": "Semi-empirical",
+    "DFT": "DFT"
+}
+
+colors = {
+    "MLIP": "blue",
+    "SE": "green",
+    "DFT": "purple"
+}
+
+for category, group in df.groupby("Type"):
+
+    plt.scatter(
+        group["log_time"],
+        group["Sum MAE"],
+        s=60,
+        alpha=0.7,
+        label=label_names.get(category, category),
+        color=colors.get(category, "gray")
+    )
 
 # Connect Pareto points
 plt.plot(
@@ -76,7 +82,8 @@ plt.plot(
 labels = [
     "eSEN-MD-direct-all-OMOL",
     "Orb-v3-direct-inf-OMAT",
-    "ωB97M-V"
+    "ωB97M-V",
+    "Orbmol-v1-direct"
 ]
 
 for method in labels:
@@ -94,6 +101,8 @@ for method in labels:
                 linewidth=0.8
             )
         )
+
+from numpy.polynomial import polynomial as poly
 
 
 plt.xlabel("log10(Average Time (s))")
