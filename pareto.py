@@ -84,7 +84,8 @@ labels = [
     "Orb-v3-direct-inf-OMAT",
     "ωB97M-V",
     "Orbmol-v1-direct",
-    "AIMNet2-NSE"
+    "AIMNet2-NSE",
+#    "M06-2X-D3(0)"
 ]
 
 for method in labels:
