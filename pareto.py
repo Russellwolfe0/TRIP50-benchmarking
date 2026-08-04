@@ -83,7 +83,8 @@ labels = [
     "eSEN-MD-direct-all-OMOL",
     "Orb-v3-direct-inf-OMAT",
     "ωB97M-V",
-    "Orbmol-v1-direct"
+    "Orbmol-v1-direct",
+    "AIMNet2-NSE"
 ]
 
 for method in labels:
