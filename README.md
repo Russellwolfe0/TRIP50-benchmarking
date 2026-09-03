@@ -1,6 +1,6 @@
 # TRIP50 benchmarking workflow
 
-[View the TRIP50 benchmark website](https://russellwolfe0.github.io/TRIP50/)
+[View the TRIP50 benchmark website](https://russellwolfe0.github.io/TRIP50-benchmarking/)
 
 This repository benchmarks electronic-structure methods on the TRIP50 reaction set. It provides a common workflow for density functional theory (DFT), machine-learned interatomic potentials (MLIPs), and g-xTB calculations, then evaluates their thermodynamic and kinetic errors producing tables and figures.
 
