@@ -1,16 +1,18 @@
 #!/usr/bin/env python3
-"""Run consistent ASE single-point calculations with every TRIP50 MLIP."""
-"""Example CLI: python scripts/run_mlip_single_points.py \
-  --backend mace \
-  --model extra_large \
-  --output calculations/mlip_results/mace-omol-extra-large.csv"""
+"""Run consistent ASE single-point calculations with every TRIP50 MLIP.
+
+Example CLI::
+
+    python scripts/run_mlip_single_points.py \
+      --backend mace \
+      --model MACE-OMOL \
+      --output calculations/mlip_results/mace-omol.csv
+"""
 
 from __future__ import annotations
 
 import argparse
 import csv
-import json
-import statistics
 import sys
 import time
 from pathlib import Path
@@ -24,24 +26,19 @@ EV_TO_HARTREE = 1.0 / 27.211386245988
 XYZ_SUFFIXES = {".xyz"}
 FIELDS = [
     "species", "model", "backend", "energy_eV", "energy_hartree",
-    "max_force_eV_per_A", "n_atoms", "charge", "spin_multiplicity", "device",
-    "repeats", "mean_time_seconds", "median_time_seconds", "min_time_seconds",
-    "stdev_time_seconds", "status", "input_file", "error",
+    "n_atoms", "charge", "spin_multiplicity", "device", "mean_time_seconds",
+    "status", "input_file", "error",
 ]
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Universal ASE energy/force driver for TRIP50 MLIPs.",
+        description="Universal ASE single-point energy driver for TRIP50 MLIPs.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument("--backend", required=True, choices=sorted(BACKENDS))
     parser.add_argument("--model", required=True, help="Checkpoint/model identifier")
     parser.add_argument("--input", type=Path, default=PROJECT_ROOT / "structures/reference")
-    parser.add_argument(
-        "--metadata", type=Path, default=DEFAULT_METADATA,
-        help="CSV containing species, charge, and multiplicity",
-    )
     parser.add_argument("--output", type=Path, help="CSV path (derived from model if omitted)")
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--charge", type=int, help="Override CSV charge for every structure")
@@ -49,35 +46,19 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--multiplicity", type=int,
         help="Override CSV multiplicity for every structure",
     )
-    parser.add_argument("--no-recursive", action="store_true")
-    parser.add_argument("--forces", action="store_true", help="Evaluate forces as well as energy")
-    parser.add_argument("--warmup", type=int, default=1)
-    parser.add_argument("--repeats", type=int, default=1)
-    parser.add_argument(
-        "--calculator-kwargs", default="{}", metavar="JSON",
-        help='Backend options, e.g. \'{"family":"polar","default_dtype":"float64"}\'',
-    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
-    if args.warmup < 0 or args.repeats < 1:
-        parser.error("--warmup must be >= 0 and --repeats must be >= 1")
     if args.multiplicity is not None and args.multiplicity < 1:
         parser.error("--multiplicity must be >= 1")
-    try:
-        args.calculator_kwargs = json.loads(args.calculator_kwargs)
-    except json.JSONDecodeError as error:
-        parser.error(f"invalid --calculator-kwargs JSON: {error}")
-    if not isinstance(args.calculator_kwargs, dict):
-        parser.error("--calculator-kwargs must decode to a JSON object")
     return args
 
 
-def files_to_run(path: Path, recursive: bool = True) -> list[Path]:
+def files_to_run(path: Path) -> list[Path]:
     if path.is_file():
         return [path] if path.suffix.lower() in XYZ_SUFFIXES else []
     if not path.is_dir():
         raise FileNotFoundError(f"Input path does not exist: {path}")
-    candidates = path.rglob("*") if recursive else path.glob("*")
+    candidates = path.rglob("*")
     return sorted(p for p in candidates if p.is_file() and p.suffix.lower() in XYZ_SUFFIXES)
 
 
@@ -153,32 +134,19 @@ def load_atoms(
     return atoms
 
 
-def evaluate(atoms: Any, calculator: Any, device: str, forces: bool, repeats: int) -> dict[str, Any]:
-    timings: list[float] = []
-    energy = 0.0
-    max_force: float | str = ""
+def evaluate(atoms: Any, calculator: Any, device: str) -> dict[str, Any]:
     atoms.calc = calculator
-    for _ in range(repeats):
-        if hasattr(calculator, "reset"):
-            calculator.reset()
-        synchronize(device)
-        started = time.perf_counter()
-        if forces:
-            force_array = atoms.get_forces()
-            energy = float(atoms.get_potential_energy())
-            max_force = float((force_array**2).sum(axis=1).max() ** 0.5)
-        else:
-            energy = float(atoms.get_potential_energy())
-        synchronize(device)
-        timings.append(time.perf_counter() - started)
+    if hasattr(calculator, "reset"):
+        calculator.reset()
+    synchronize(device)
+    started = time.perf_counter()
+    energy = float(atoms.get_potential_energy())
+    synchronize(device)
+    elapsed = time.perf_counter() - started
     return {
         "energy_eV": f"{energy:.12f}",
         "energy_hartree": f"{energy * EV_TO_HARTREE:.12f}",
-        "max_force_eV_per_A": "" if max_force == "" else f"{max_force:.12f}",
-        "mean_time_seconds": f"{statistics.mean(timings):.8f}",
-        "median_time_seconds": f"{statistics.median(timings):.8f}",
-        "min_time_seconds": f"{min(timings):.8f}",
-        "stdev_time_seconds": f"{statistics.stdev(timings) if len(timings) > 1 else 0.0:.8f}",
+        "mean_time_seconds": f"{elapsed:.8f}",
     }
 
 
@@ -191,16 +159,16 @@ def display_path(path: Path) -> str:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    files = files_to_run(args.input, not args.no_recursive)
+    files = files_to_run(args.input)
     if not files:
         raise FileNotFoundError(f"No .xyz or .extxyz files found at {args.input}")
-    metadata = load_structure_metadata(args.metadata)
+    metadata = load_structure_metadata(DEFAULT_METADATA)
     unlisted = [path for path in files if path.stem not in metadata]
     for path in unlisted:
-        print(f"Skipping {path}: no row in {args.metadata}", file=sys.stderr)
+        print(f"Skipping {path}: no row in {DEFAULT_METADATA}", file=sys.stderr)
     files = [path for path in files if path.stem in metadata]
     if not files:
-        raise ValueError(f"None of the selected structures have rows in {args.metadata}")
+        raise ValueError(f"None of the selected structures have rows in {DEFAULT_METADATA}")
     output = args.output or PROJECT_ROOT / "data/intermediate/mlip_results" / f"{args.model}.csv"
     print(f"{args.backend}/{args.model}: {len(files)} structure(s) on {args.device}")
     if args.dry_run:
@@ -209,19 +177,14 @@ def main(argv: list[str] | None = None) -> int:
             print(f"{path} | charge={charge} multiplicity={multiplicity}")
         return 0
 
-    provider = build_provider(args.backend, args.model, args.device, **args.calculator_kwargs)
-    for path in files[:args.warmup]:
-        atoms = load_atoms(path, metadata, args.charge, args.multiplicity)
-        evaluate(atoms, provider.for_atoms(atoms), args.device, args.forces, 1)
-
+    provider = build_provider(args.backend, args.model, args.device)
     rows: list[dict[str, Any]] = []
     for index, path in enumerate(files, 1):
         atoms = None
         row = {field: "" for field in FIELDS}
         row.update({
             "species": path.stem, "model": args.model, "backend": args.backend,
-            "device": args.device, "repeats": args.repeats, "status": "failed",
-            "input_file": display_path(path),
+            "device": args.device, "status": "failed", "input_file": display_path(path),
         })
         try:
             atoms = load_atoms(path, metadata, args.charge, args.multiplicity)
@@ -229,9 +192,7 @@ def main(argv: list[str] | None = None) -> int:
                 "n_atoms": len(atoms), "charge": atoms.info["charge"],
                 "spin_multiplicity": atoms.info["spin"],
             })
-            row.update(evaluate(
-                atoms, provider.for_atoms(atoms), args.device, args.forces, args.repeats
-            ))
+            row.update(evaluate(atoms, provider.for_atoms(atoms), args.device))
             row["status"] = "completed"
             print(f"[{index}/{len(files)}] {path.name}: {row['energy_eV']} eV")
         except Exception as error:

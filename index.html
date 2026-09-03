@@ -1,0 +1,487 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TRIP50 Benchmarking</title>
+    <link rel="icon" type="image/jpeg" href="images/paton-lab-logo.jpeg">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css">
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [["$", "$"], ["\\(", "\\)"]],
+                displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+                processEscapes: true
+            },
+            options: {
+                skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+            }
+        };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+<header class="hero">
+    <nav class="navbar" aria-label="Primary navigation">
+        <img src="images/csu-logo.png" class="logo" alt="Colorado State University">
+        <div class="nav-title">
+            Benchmarking Kinetic and Thermodynamic Energetic Predictions for Triplet Reactivity
+            <div class="author">Russell Wolfe</div>
+        </div>
+        <a href="https://patonlab.com" target="_blank" rel="noopener">
+            <img src="images/paton-lab-logo.jpeg" class="logo" alt="Paton Research Group">
+        </a>
+    </nav>
+    <div class="hero-content">
+        <p>
+            This project serves to evaluate the accuracy and efficiency of several
+            semi-empirical and Machine Learning Interatomic Potential (MLIP) models
+            when predicting reaction energies on triplet-state reaction thermochemistry
+            using the TRIP50 benchmark dataset.
+        </p>
+        <div class="buttons">
+            <a href="https://github.com/Russellwolfe0/TRIP50-benchmarking" class="button" target="_blank" rel="noopener">GitHub</a>
+            <a href="https://pubs.acs.org/jctcce/article/22/7/3530/5149845/Fundamental-Study-of-Density-Functional-Theory" class="button" target="_blank" rel="noopener">Original TRIP50 paper</a>
+            <a href="#results" class="button">View results</a>
+        </div>
+    </div>
+</header>
+
+<main>
+    <section id="overview">
+
+        <h2>Overview</h2>
+    
+        <p>
+            Recent developments in triplet-state organic chemistry have increased the need for 
+            accurate computational methods for describing reaction energies. Due to their 
+            short lifetime, mechanistic studies on open-shell triplet species rely highly on 
+            computation. In the original <a href="https://pubs.acs.org/jctcce/article/22/7/3530/5149845/Fundamental-Study-of-Density-Functional-Theory">TRIP-50</a> 
+            study, benchmarking was established using a variety of density functional 
+            theory (DFT) methods.<sup><a href="#ref1">[1]</a></sup> A test set of 50 organic reactions was used to compute
+            barrier heights and thermodynamic values using 45 functionals. It was found
+            that range-separated hybrid functionals outperformed non-range-separated versions,
+            and the best-performing single hybrid functionals were &omega;M06-D3, &omega;B97M-V,
+            M06-2X-D3, and M05-2X-D3 for a balance of high accuracy and computational efficiency.
+            <sup><a href="#ref2">[2]</a></sup><sup><a href="#ref3">[3]</a></sup><sup><a href="#ref4">[4]</a></sup><sup><a href="#ref5">[5]</a></sup>
+        </p>
+        <p>
+            While DFT methods provide accurate prediction, their computation expense limits their 
+            application to large-scale and high-throughput studies. In this project, I'm expanding 
+            on the original TRIP50 benchmarking by evaluating the performance of a variety of semi-empirical and 
+            MLIP models. To begin, I selected the highest performing from each category of 
+            functional as tested in the original benchmarking. Then, I benchmarked using the models 
+            listed in the "models tested" section.
+        </p>
+    
+    </section>
+
+    <section id="TRIP50-Dataset">
+        <h2>TRIP50 Dataset</h2>
+        <p>
+            The TRIP50 dataset was developed in Hughes et al. to create a diverse set of chemical reactions that proceed through at least one triplet transition state.<sup><a href="#ref1">[1]</a></sup> Reactions include transformations involving forming/breaking different bonds, along with H-atom transfer reactions. This results in 7 distinct categories of reactions (C-C, C-O, C-S, C-Hal, Si-X, N-X, HAT). Hughes writes about the types of reactions present in the dataset:
+        </p>
+        
+        <blockquote>
+            In total, this data set represents a diverse set of chemical reactions relevant to various fields of chemistry. This includes reactions relevant for medicinal and synthetic chemists, such as the Zimmerman di-π-methane rearrangement (1, 2), Norrish Type I and II reactions (10, 11, 23, 24), stepwise [2 + 2] cycloadditions (3–7, 9, 13–17, 42), with a subset of those being Paterno-Büchi reactions, Shultz-type 6π heterocyclizations (9), and reactions resulting in the evolution of molecular nitrogen from azo and diazo compounds that yield reactive carbon-centered radicals and triplet carbenes (43–49). A subset of the HAT and C–S reactions contain triplet sulfur dioxide and atomic sulfur, respectively (18, 19, 27–30). These species are common air pollutants whose triplet reactions are of relevance to atmospheric chemistry. Other reactions in the data set are relevant for catalysis (8), as well as biological (42) and materials (20) chemistry. (Hughes, 2026, p.3)
+        </blockquote>
+        
+        <div class="sub-card" onclick="event.stopPropagation(); toggleCard('trip50-image','trip50-arrow')">
+            <div class="sub-header">
+                <h4>TRIP50 Dataset</h4>
+                <span id="trip50-arrow" class="arrow">▼</span>
+            </div>
+        </div>
+    
+        <figure>
+            <div id="trip50-image" class="card-content">
+                <p>Set of 50 representative triplet state reactions over seven categories: C−C, C−O, C−S, HAT, Si−X, C−Hal, and N−X.</p>
+                <img src="images/trip50image.jpg"/>
+            </div>
+        </figure>
+        
+    
+        
+    </section>
+
+    <section id="models">
+        <h2>Models Tested</h2>
+        <h3>Reference Standard</h3>
+        <p>DLPNO-CCSD(T)/CBS</p>
+        <p>Used as the reference for all reported errors.</p>
+        <h3>Final Models Tested</h3>
+        <div class="model-grid">
+            <div class="model-card dft" onclick="toggleCard('dft-list','dft-arrow')">
+                <div class="card-header">
+                    <h3>DFT</h3>
+                    <span id="dft-arrow" class="arrow">▼</span>
+                </div>
+                <p>7 methods</p>
+                <div id="dft-list" class="card-content">
+                    <p>All using def2-QZVPP basis set</p>
+                    <ul>
+                        <li>B2GP-PLYP-D4</li>
+                        <li>B3PW91-D4</li>
+                        <li>B97M-V</li>
+                        <li>M06-2X-D3(0)</li>
+                        <li>M06-D4</li>
+                        <li>OLYP-D3BJ</li>
+                        <li>&omega;B97M-V</li>
+                    </ul>
+                </div>
+            </div>
+            <div class="model-card se" onclick="toggleCard('se-list','se-arrow')">
+                <div class="card-header">
+                    <h3>Semi-Empirical</h3>
+                    <span id="se-arrow" class="arrow">▼</span>
+                </div>
+                <p>1 method</p>
+                <div id="se-list" class="card-content">
+                    <ul><li>g-xTB</li></ul>
+                </div>
+            </div>
+            <div class="model-card ml" onclick="toggleCard('ml-list','ml-arrow')">
+                <div class="card-header">
+                    <h3>Machine Learning</h3>
+                    <span id="ml-arrow" class="arrow">▼</span>
+                </div>
+                <p>16 methods</p>
+                <div id="ml-list" class="card-content">
+                    <ul>
+                        <li>AIMNet2-NSE</li>
+                        <li>AllScAIP-MD conserving and direct</li>
+                        <li>eSEN-MD direct</li>
+                        <li>eSEN-SM conserving and direct</li>
+                        <li>MACE-OMOL</li>
+                        <li>ORBmol v1 conservative, v1 direct, and v2</li>
+                        <li>POLAR-1-s, POLAR-1-m, and POLAR-1-l</li>
+                        <li>UMA-s-1p1, UMA-s-1p2, and UMA-m-1p1</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section id="methods">
+        <h2>Methods</h2>
+        <p>
+            In Hughes, geometry optimizations and vibrational frequency calculations were performed in Gaussian 16 software using &omega;B97X-D<sup><a href="#ref6">[6]</a></sup>/def2-TZVP<sup><a href="#ref7">[7]</a></sup> level of theory. Conformational sampling was performed using a combination of RDKit and manual conformational sampling.
+        </p> 
+        <p>
+            As a comparison, the highest performing functional from the classes spanning GGA, meta-GGA, hybrid GGA, hybrid meta-GGA, range-separated hybrid, and double hybrid classes were selected. Single point energy corrections were performed using the def2-QZVPP basis set.<sup><a href="#ref7">[7]</a></sup> As in Hughes, reference values were computed using DLPNO-CCSD(T)<sup><a href="#ref8">[8]</a><a href="#ref9">[9]</a><a href="#ref10">[10]</a><a href="#ref11">[11]</a><a href="#ref12">[12]</a><a href="#ref13">[13]</a></sup> (domain-based local pair natural orbital coupled cluster with singles, doubles, and perturbative triples).
+        </p>
+    
+        <p>
+            A selection of semi-emprical methods were selected to represent neglect of diatomic differential overlap (NDDO) and extended tight-binding (xTB) methods. These were performed in ORCA 6.1.1, g-xTB, and openMOPAC (see <a href="#comp-models">Computational Models</a>).
+        </p>
+    
+        <p>
+            MLIP models were selected if they were molecular models that accepted spin, multiplicity, or magnetic moment as an input parameter. DFT calculations used the ORCA program system.<sup><a href="#ref14">[14]</a><a href="#ref15">[15]</a></sup>
+        </p>
+    
+        <h3>Calculation of Reported Errors</h3>
+        <p>
+            For values reported as mean absolute error (MAE) over several reactions, values were calculated according to 
+        </p>
+        <p>$$\text{MAE} = \frac{1}{n}\displaystyle\sum^n_{i=1}|\Delta E_{\text{Calculated}}-\Delta E_{\text{Reference}}|$$</p>
+        <p>
+            where $n$ is the number of reactions over which the average is being taken, $\Delta E_{\text{Calculated}}$ is the thermochemical value for either barrier height or reaction energy, and $\Delta E_{\text{Reference}}$ is the reference value for that reaction.
+        </p>
+    
+        <p>
+            For kinetic values reported, forward and reverse barrier heights were calculated according to 
+        </p>
+        <p>$$\Delta E_{\text{FBH}} = \displaystyle\sum E_{\text{Reactants}} = E_{\text{TS}}$$</p>
+        <p>$$\Delta E_{\text{RBH}} = \displaystyle\sum E_{\text{Products}} = E_{\text{TS}}.$$</p>
+        <p>
+            Errors in kinetics were calculated as the average of absolute errors in forward and reverse barrier heights, as
+        </p>
+        <p>$$\text{Error}=\frac{|\Delta E_{\text{FBH}_{\text{Calculated}}}-\Delta E_{\text{FBH}_{\text{Reference}}}|+|\Delta E_{\text{RBH}_{\text{Calculated}}}-\Delta E_{\text{RBH}_{\text{Reference}}}|}{2}.$$</p>
+    
+    </section>
+
+    <section id="results">
+        <h2>Final benchmark results</h2>
+        <p>The table loads directly from <code>data/final/final_data_table.csv</code> and is sorted by combined MAE.</p>
+        <p id="results-status" class="load-status" aria-live="polite">Loading final benchmark data…</p>
+        <div class="table-scroll">
+            <table id="results-table" class="display">
+                <thead><tr>
+                    <th>Model</th><th>Category</th><th>Average time (s)</th>
+                    <th>Thermo MAE</th><th>Kinetic MAE</th><th>Combined MAE</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <h3>Efficiency Score</h3>
+        <p>
+            An accuracy-weighted efficiency score is useful for comparing models whose runtimes
+            span several orders of magnitude. Times are first transformed as
+            $t'=\log_{10}(t+1)$. Time and accuracy are each normalized to the interval from zero
+            to one, then combined with 80% weight on accuracy and 20% on time. This score is a
+            descriptive aid rather than a universal ranking because the timing routes are not
+            hardware-normalized.
+        </p>
+
+        <h3>Accuracy and computational cost</h3>
+        <div class="figure-row">
+            <figure>
+                <img src="images/pareto_front.png" alt="Combined MAE versus average runtime Pareto front">
+                <figcaption>Runtime versus combined MAE. The dashed line marks the Pareto frontier.</figcaption>
+            </figure>
+            <figure>
+                <img src="images/paretov2_front.png" alt="Scaled combined MAE versus average runtime">
+                <figcaption>Runtime versus scaled combined MAE, emphasizing differences among the most accurate methods.</figcaption>
+            </figure>
+            <figure>
+                <img src="images/thermo_vs_kinetic_mae.png" alt="Thermodynamic MAE versus kinetic MAE">
+                <figcaption>Thermodynamic versus kinetic MAE; the diagonal is y = x.</figcaption>
+            </figure>
+        </div>
+
+        <h3>Parity Plots</h3>
+        <p>
+            Compare each method's predicted reaction energies with the corresponding reference
+            values. Kinetic plots distinguish forward and reverse barriers.
+        </p>
+        <div class="parity-grid">
+            <section class="parity-viewer" data-parity-type="thermo">
+                <h4>Thermodynamic Parity Plots</h4>
+                <img
+                    id="thermo-parity-image"
+                    class="parity-image"
+                    src="images/parity_plots/b2gp-plyp-d4_thermo_parity.png"
+                    alt="B2GP-PLYP-D4 thermodynamic parity plot"
+                >
+                <div class="parity-tabs" aria-label="Select a thermodynamic parity plot"></div>
+            </section>
+
+            <section class="parity-viewer" data-parity-type="kinetic">
+                <h4>Kinetic Parity Plots</h4>
+                <img
+                    id="kinetic-parity-image"
+                    class="parity-image"
+                    src="images/parity_plots/b2gp-plyp-d4_kinetic_parity.png"
+                    alt="B2GP-PLYP-D4 kinetic parity plot"
+                >
+                <div class="parity-tabs" aria-label="Select a kinetic parity plot"></div>
+            </section>
+        </div>
+    </section>
+
+    <section id="reaction-types">
+        <h2>Reaction-type analysis</h2>
+        <p>Use the tables to compare each model within the seven reaction categories.</p>
+        <p id="category-status" class="load-status" aria-live="polite">Loading reaction-category data…</p>
+
+        <h3>Thermodynamic MAE by category</h3>
+        <div class="table-scroll"><table id="thermo-table" class="display"><thead><tr>
+            <th>Model</th><th>Category</th><th>Overall</th><th>C–C</th><th>C–O</th>
+            <th>C–S</th><th>HAT</th><th>Si–X</th><th>C–Hal</th><th>N–X</th>
+        </tr></thead><tbody></tbody></table></div>
+
+        <h3>Kinetic MAE by category</h3>
+        <div class="table-scroll"><table id="kinetic-table" class="display"><thead><tr>
+            <th>Model</th><th>Category</th><th>Overall</th><th>C–C</th><th>C–O</th>
+            <th>C–S</th><th>HAT</th><th>Si–X</th><th>C–Hal</th><th>N–X</th>
+        </tr></thead><tbody></tbody></table></div>
+
+        <h3>Category summary</h3>
+        <p>Overall MAEs and average model runtime for each reaction class.</p>
+        <div class="table-scroll"><table id="category-summary-table" class="display"><thead><tr>
+            <th>Reaction type</th><th>Thermo MAE</th><th>Kinetic MAE</th><th>Average time (s)</th>
+        </tr></thead><tbody></tbody></table></div>
+        <figure class="wide-figure">
+            <img src="images/reaction_type_summary.png" alt="TRIP50 reaction-type summary table">
+        </figure>
+
+        <h3>Reaction-Coordinate Diagrams</h3>
+        <p>
+            Compare relative energies for representative methods and one reaction from each
+            category. Every diagram is normalized to the reactants.
+        </p>
+        <section class="coordinate-viewer" data-coordinate-viewer>
+            <h4>Method Comparisons</h4>
+            <img id="reaction-coordinate-image" class="coordinate-image"
+                 src="images/reaction_coordinates/rxn1/method_comparison.png"
+                 alt="Reaction 1 coordinate diagram comparing methods">
+            <div class="coordinate-tabs" aria-label="Select a reaction-coordinate diagram"></div>
+        </section>
+
+        <h3>Reaction-type Pareto fronts</h3>
+        <div class="pareto-mode-control">
+            <label><input type="radio" name="pareto-mode" value="scaled" checked> Scaled MAE</label>
+            <label><input type="radio" name="pareto-mode" value="absolute"> Absolute MAE</label>
+        </div>
+        <div class="pareto-grid">
+            <article class="pareto-viewer" data-pareto-type="thermo">
+                <h4>Thermodynamic</h4>
+                <img id="thermo-pareto-image" class="pareto-image" src="images/Paretofrontsbycat/pareto_thermo_c_c.png" alt="Thermodynamic Pareto front for C–C reactions">
+                <div class="pareto-tabs" aria-label="Thermodynamic reaction category"></div>
+            </article>
+            <article class="pareto-viewer" data-pareto-type="kinetic">
+                <h4>Kinetic</h4>
+                <img id="kinetic-pareto-image" class="pareto-image" src="images/Paretofrontsbycat/pareto_kinetic_c_c.png" alt="Kinetic Pareto front for C–C reactions">
+                <div class="pareto-tabs" aria-label="Kinetic reaction category"></div>
+            </article>
+        </div>
+
+        <h3>Reaction-Category MAE Profiles</h3>
+        <p>
+            Select a model to compare its thermodynamic and kinetic MAEs across the seven
+            reaction categories. Smaller values indicate greater accuracy.
+        </p>
+        <div class="radar-viewer">
+            <label for="radar-model-select">Model</label>
+            <select id="radar-model-select" aria-label="Select a model for the radar plot"></select>
+            <img
+                id="radar-plot-image"
+                src="images/radar_plots/radar_b2gp-plyp-d4.png"
+                alt="B2GP-PLYP-D4 reaction-category MAE radar plot"
+            >
+        </div>
+
+        <h3>MAE Per Category by Method Type</h3>
+        <p>
+            Distance from the origin is MAE in kcal/mol. These plots compare the average
+            category behavior of DFT, MLIP, and semiempirical models using the current final data.
+        </p>
+        <div class="category-comparison-radars">
+            <figure>
+                <img src="images/radar_plots/dft_vs_se_thermo_categories.png"
+                     alt="Thermodynamic category MAE radar plot by method type">
+                <figcaption>Thermodynamic category MAEs by method type.</figcaption>
+            </figure>
+            <figure>
+                <img src="images/radar_plots/dft_vs_se_kinetic_categories.png"
+                     alt="Kinetic category MAE radar plot by method type">
+                <figcaption>Kinetic category MAEs by method type.</figcaption>
+            </figure>
+        </div>
+
+        <h3>Two Model Radar Plot Comparison</h3>
+        <p>
+            Select two models and whether to display thermodynamic error, kinetic error, or both.
+            Lower values are closer to the center and indicate lower MAE.
+        </p>
+        <div class="model-category-comparison">
+            <div class="model-category-controls">
+                <label>Model 1<select id="comparison-model-one"></select></label>
+                <label>Model 2<select id="comparison-model-two"></select></label>
+                <label>Property<select id="comparison-property">
+                    <option value="both">Both</option>
+                    <option value="thermo">Thermodynamic</option>
+                    <option value="kinetic">Kinetic</option>
+                </select></label>
+            </div>
+            <p id="model-category-status" class="model-category-status" aria-live="polite"></p>
+            <svg id="model-category-radar" class="model-category-radar" viewBox="0 0 820 620"
+                 role="img" aria-label="Reaction-category MAE comparison radar chart"></svg>
+        </div>
+    </section>
+
+    <section id="discussion">
+        <h2>Discussion</h2>
+        <p>
+            Our three most accurate models were DFT models: B2GP-PLYP-D4, &omega;B97M-V,
+            and M06-2X-D3(0). However, the best-performing MLIP had a combined MAE only
+            about 0.53 kcal/mol greater than the best-performing DFT model, while having
+            a computational cost roughly 4 to 5 orders of magnitude lower.
+        </p>
+        <p>
+            Overall, MLIPs can be very effective in predicting thermodynamic and kinetic
+            properties of reactions involving triplet-state species. When selecting a model to
+            use on a triplet-state reaction, it is important to consider the desired accuracy,
+            the type of reaction, and the computation speed desired. For very low computational
+            cost, eSEN-MD-direct-all-OMOL has the highest accuracy out of all of the non-DFT
+            methods tested. Additionally, it has one of the lowest computational costs, being
+            only 2.27 times slower than the second-fastest model and 5.29 times slower than the
+            fastest model, both of which were more than 2 kcal/mol less accurate. The
+            semi-empirical method g-xTB performed worse than nearly all of the MLIPs, for a
+            similar or higher computational cost.
+        </p>
+        <p>
+            Within the MLIP groups, the only models that could produce usable results were the
+            molecular models trained on datasets including open-shell species that accept spin or
+            multiplicity as an input parameter. Spin-unaware models were excluded as they do not
+            factor spin into energy predictions and therefore did not produce values representative
+            of the reactions. Materials models were also excluded as they are trained on properties
+            of crystal lattices and solid-state species that are not directly applicable to the
+            small-molecule reactions being studied.
+        </p>
+    </section>
+
+    <section id="comp-models">
+        <h2>Computational Models</h2>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>Type</th><th>Family</th><th>Models</th><th>Software</th><th>Reference</th></tr></thead>
+                <tbody>
+                    <tr><td>DFT</td><td>Double hybrid</td><td>B2GP-PLYP-D4</td><td>ORCA</td><td><sup><a href="#ref16">[16]</a></sup></td></tr>
+                    <tr><td>DFT</td><td>Hybrid meta-GGA</td><td>M06-D4; M06-2X-D3(0)</td><td>ORCA</td><td><sup><a href="#ref17">[17]</a></sup></td></tr>
+                    <tr><td>DFT</td><td>Meta-GGA</td><td>B97M-V</td><td>ORCA</td><td><sup><a href="#ref18">[18]</a></sup></td></tr>
+                    <tr><td>DFT</td><td>Range-separated hybrid</td><td>&omega;B97M-V</td><td>ORCA</td><td><sup><a href="#ref3">[3]</a></sup></td></tr>
+                    <tr><td>DFT</td><td>Hybrid GGA</td><td>B3PW91-D4</td><td>ORCA</td><td><sup><a href="#ref19">[19]</a></sup></td></tr>
+                    <tr><td>DFT</td><td>GGA</td><td>OLYP-D3BJ</td><td>ORCA</td><td><sup><a href="#ref20">[20]</a><a href="#ref21">[21]</a><a href="#ref22">[22]</a></sup></td></tr>
+                    <tr><td>Semiempirical</td><td>Extended tight binding</td><td>g-xTB</td><td>g-xTB</td><td><sup><a href="#ref23">[23]</a></sup></td></tr>
+                    <tr><td>MLIP</td><td>AllScAIP</td><td>MD conserving; MD direct</td><td>ASE/FairChem</td><td><sup><a href="#ref24">[24]</a></sup></td></tr>
+                    <tr><td>MLIP</td><td>eSEN</td><td>MD direct; SM conserving; SM direct</td><td>ASE/FairChem</td><td><sup><a href="#ref25">[25]</a></sup></td></tr>
+                    <tr><td>MLIP</td><td>MACE</td><td>MACE-OMOL</td><td>ASE/MACE</td><td><sup><a href="#ref26">[26]</a></sup></td></tr>
+                    <tr><td>MLIP</td><td>ORB</td><td>ORBmol v1 conservative; v1 direct; v2</td><td>ASE/ORB</td><td><sup><a href="#ref27">[27]</a></sup></td></tr>
+                    <tr><td>MLIP</td><td>UMA</td><td>s-1p1; s-1p2; m-1p1</td><td>ASE/FairChem</td><td><sup><a href="#ref28">[28]</a></sup></td></tr>
+                    <tr><td>MLIP</td><td>AIMNet2</td><td>AIMNet2-NSE</td><td>ASE/AIMNet2</td><td><sup><a href="#ref29">[29]</a><a href="#ref30">[30]</a></sup></td></tr>
+                    <tr><td>MLIP</td><td>MACE-POLAR-1</td><td>POLAR-1-s; POLAR-1-m; POLAR-1-l</td><td>ASE/MACE</td><td><sup><a href="#ref31">[31]</a></sup></td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="references">
+        <h2>References</h2>
+        <ol>
+            <li id="ref1">William B. Hughes, Mihai V. Popescu, Robert S. Paton; Fundamental Study of Density Functional Theory Applied to Triplet State Reactivity: Introduction of the TRIP50 Data Set. <i>J. Chem. Theory Comput.</i> 2026, 22, 3530–3542. <a href="https://doi.org/10.1021/acs.jctc.6c00144">https://doi.org/10.1021/acs.jctc.6c00144</a></li>
+            <li id="ref2">You-Sheng Lin, Guan-De Li, Shan-Ping Mao, Jeng-Da Chai; Long-Range Corrected Hybrid Density Functionals with Improved Dispersion Corrections. <i>J. Chem. Theory Comput.</i> 2013, 9, 263–272. <a href="https://doi.org/10.1021/ct300715s">https://doi.org/10.1021/ct300715s</a></li>
+            <li id="ref3">Narbe Mardirossian, Martin Head-Gordon; &omega;B97M-V: A combinatorially optimized, range-separated hybrid, meta-GGA density functional with VV10 nonlocal correlation. <i>J. Chem. Phys.</i> 2016, 144, 214110. <a href="https://doi.org/10.1063/1.4952647">https://doi.org/10.1063/1.4952647</a></li>
+            <li id="ref4">Zhao, Y.; Truhlar, D. G. The M06 suite of density functionals for main group thermochemistry, thermochemical kinetics, noncovalent interactions, excited states, and transition elements. <i>Theor. Chem. Acc.</i> 2008, 120, 215–241. <a href="https://doi.org/10.1007/s00214-007-0310-x">https://doi.org/10.1007/s00214-007-0310-x</a></li>
+            <li id="ref5">Zhao, Y.; Schultz, N. E.; Truhlar, D. G. Design of Density Functionals by Combining the Method of Constraint Satisfaction with Parametrization. <i>J. Chem. Theory Comput.</i> 2006, 2, 364–382. <a href="https://doi.org/10.1021/ct0502763">https://doi.org/10.1021/ct0502763</a></li>
+            <li id="ref6">Jeng-Da Chai, Martin Head-Gordon; Long-range corrected hybrid density functionals with damped atom–atom dispersion corrections. <i>Phys. Chem. Chem. Phys.</i> 2008, 10, 6615–6620. <a href="https://doi.org/10.1039/b810189b">https://doi.org/10.1039/b810189b</a></li>
+            <li id="ref7">Florian Weigend, Reinhart Ahlrichs; Balanced basis sets of split valence, triple zeta valence and quadruple zeta valence quality for H to Rn. <i>Phys. Chem. Chem. Phys.</i> 2005, 7, 3297–3305. <a href="https://doi.org/10.1039/b508541a">https://doi.org/10.1039/b508541a</a></li>
+            <li id="ref8">Masaaki Saitow et al. A new near-linear scaling, efficient and accurate, open-shell DLPNO-CCSD theory. <i>J. Chem. Phys.</i> 2017, 146, 164105. <a href="https://doi.org/10.1063/1.4981521">https://doi.org/10.1063/1.4981521</a></li>
+            <li id="ref9">Christoph Riplinger, Frank Neese; An efficient and near linear scaling pair natural orbital based local coupled cluster method. <i>J. Chem. Phys.</i> 2013, 138, 034106. <a href="https://doi.org/10.1063/1.4773581">https://doi.org/10.1063/1.4773581</a></li>
+            <li id="ref10">Frank Neese, Andreas Hansen, Dimitrios G. Liakos; Efficient and accurate approximations to local coupled cluster singles doubles using a truncated pair natural orbital basis. <i>J. Chem. Phys.</i> 2009, 131, 064103. <a href="https://doi.org/10.1063/1.3173827">https://doi.org/10.1063/1.3173827</a></li>
+            <li id="ref11">Christoph Riplinger et al. Natural triple excitations in local coupled cluster calculations with pair natural orbitals. <i>J. Chem. Phys.</i> 2013, 139, 134101. <a href="https://doi.org/10.1063/1.4821834">https://doi.org/10.1063/1.4821834</a></li>
+            <li id="ref12">Christoph Riplinger et al. Sparse maps—linear scaling domain based pair natural orbital coupled cluster theory. <i>J. Chem. Phys.</i> 2016, 144, 024109. <a href="https://doi.org/10.1063/1.4939030">https://doi.org/10.1063/1.4939030</a></li>
+            <li id="ref13">Giovanni Bistoni et al. Treating Subvalence Correlation Effects in DLPNO Coupled Cluster Calculations. <i>J. Chem. Theory Comput.</i> 2017, 13, 3220–3227. <a href="https://doi.org/10.1021/acs.jctc.7b00352">https://doi.org/10.1021/acs.jctc.7b00352</a></li>
+            <li id="ref14">Neese, F. The ORCA program system. <i>WIREs Comput. Mol. Sci.</i> 2012, 2, 73–78. <a href="https://doi.org/10.1002/wcms.81">https://doi.org/10.1002/wcms.81</a></li>
+            <li id="ref15">Neese, F. Software Update: The ORCA Program System—Version 6.0. <i>WIREs Comput. Mol. Sci.</i> 2025, 15, e70019. <a href="https://doi.org/10.1002/wcms.70019">https://doi.org/10.1002/wcms.70019</a></li>
+            <li id="ref16">Karton, A. et al. Derivation of a Robust, Generally Applicable, Double-Hybrid Functional for Thermochemistry and Thermochemical Kinetics. <i>J. Phys. Chem. A</i> 2008, 112, 12868–12886. <a href="https://doi.org/10.1021/jp801805p">https://doi.org/10.1021/jp801805p</a></li>
+            <li id="ref17">Zhao, Y.; Truhlar, D. G. The M06 Suite of Density Functionals. <i>Theor. Chem. Acc.</i> 2008, 120, 215–241. <a href="https://doi.org/10.1007/s00214-007-0310-x">https://doi.org/10.1007/s00214-007-0310-x</a></li>
+            <li id="ref18">Mardirossian, N.; Head-Gordon, M. Mapping the Genome of Meta-GGA Density Functionals: The Search for B97M-V. <i>J. Chem. Phys.</i> 2015, 142, 074111. <a href="https://doi.org/10.1063/1.4907719">https://doi.org/10.1063/1.4907719</a></li>
+            <li id="ref19">Becke, A. D. Density-functional Thermochemistry. III. The Role of Exact Exchange. <i>J. Chem. Phys.</i> 1993, 98, 5648–5652. <a href="https://doi.org/10.1063/1.464913">https://doi.org/10.1063/1.464913</a></li>
+            <li id="ref20">Lee, C.; Yang, W.; Parr, R. G. Development of the Colle-Salvetti Correlation-Energy Formula into a Functional of the Electron Density. <i>Phys. Rev. B</i> 1988, 37, 785–789. <a href="https://doi.org/10.1103/PhysRevB.37.785">https://doi.org/10.1103/PhysRevB.37.785</a></li>
+            <li id="ref21">Miehlich, B. et al. Results Obtained with the Correlation Energy Density Functionals of Becke and Lee, Yang and Parr. <i>Chem. Phys. Lett.</i> 1989, 157, 200–206. <a href="https://doi.org/10.1016/0009-2614(89)87234-3">https://doi.org/10.1016/0009-2614(89)87234-3</a></li>
+            <li id="ref22">Handy, N. C.; Cohen, A. J. Left-Right Correlation Energy. <i>Mol. Phys.</i> 2001, 99, 403–412. <a href="https://doi.org/10.1080/00268970010018431">https://doi.org/10.1080/00268970010018431</a></li>
+            <li id="ref23">Thomas Froitzheim et al. g-xTB: A General-Purpose Extended Tight-Binding Electronic Structure Method for H to Lr. <i>ChemRxiv</i> 2025. <a href="https://doi.org/10.26434/chemrxiv-2025-bjxvt">https://doi.org/10.26434/chemrxiv-2025-bjxvt</a></li>
+            <li id="ref24">Qu, E. et al. A recipe for scalable attention-based MLIPs: unlocking long-range accuracy with all-to-all node attention. <i>arXiv</i> 2026. <a href="https://doi.org/10.48550/arXiv.2603.06567">https://doi.org/10.48550/arXiv.2603.06567</a></li>
+            <li id="ref25">Levine, D. S. et al. The Open Molecules 2025 (OMol25) dataset, evaluations, and models. <i>arXiv</i> 2025. <a href="https://arxiv.org/abs/2505.08762">arXiv:2505.08762</a></li>
+            <li id="ref26">Batatia, I. et al. The design space of E(3)-equivariant atom-centred interatomic potentials. <i>Nat. Mach. Intell.</i> 2025, 7, 56–67. <a href="https://doi.org/10.1038/s42256-024-00956-x">https://doi.org/10.1038/s42256-024-00956-x</a></li>
+            <li id="ref27">Neumann, M. et al. Orb: A fast, scalable neural network potential. <i>arXiv</i> 2024. <a href="https://arxiv.org/abs/2410.22570">arXiv:2410.22570</a></li>
+            <li id="ref28">Wood, B. et al. UMA: A family of universal models for atoms. <i>NeurIPS</i> 2026. <a href="https://arxiv.org/abs/2506.23971">arXiv:2506.23971</a></li>
+            <li id="ref29">Anstine, D. M.; Zubatyuk, R.; Isayev, O. AIMNet2: a neural network potential for neutral, charged, organic, and elemental-organic systems. <i>Chem. Sci.</i> 2025, 16, 10228–10244. <a href="https://doi.org/10.1039/d4sc08572h">https://doi.org/10.1039/d4sc08572h</a></li>
+            <li id="ref30">Kalita, B. et al. AIMNet2-NSE: A Transferable Reactive Neural Network Potential for Open-Shell Chemistry. <i>ChemRxiv</i> 2025. <a href="https://doi.org/10.26434/chemrxiv-2025-kdg6n-v2">https://doi.org/10.26434/chemrxiv-2025-kdg6n-v2</a></li>
+            <li id="ref31">Batatia, I. et al. MACE-POLAR-1: A polarisable electrostatic foundation model for molecular chemistry. <i>arXiv</i> 2026. <a href="https://arxiv.org/abs/2602.19411">arXiv:2602.19411</a></li>
+        </ol>
+    </section>
+</main>
+
+<footer>
+    <p>TRIP50 benchmarking workflow · Paton Research Group · Colorado State University</p>
+</footer>
+<script src="script.js"></script>
+</body>
+</html>

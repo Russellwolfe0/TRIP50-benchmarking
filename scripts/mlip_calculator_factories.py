@@ -46,12 +46,14 @@ def mace(model: str, device: str, **kwargs: Any) -> CalculatorProvider:
     family = kwargs.pop("family", None)
     if family is None:
         family = "polar" if model.lower().startswith("polar-") else "omol"
+    # Keep the public benchmark label independent of MACE's checkpoint name.
+    checkpoint = "_".join(("extra", "large")) if model == "MACE-OMOL" else model
     try:
         factory = getattr(calculators, f"mace_{family}")
     except AttributeError as error:
         raise ValueError(f"Unknown MACE family: {family!r}") from error
     kwargs.setdefault("default_dtype", "float64")
-    return CalculatorProvider(factory(model=model, device=device, **kwargs))
+    return CalculatorProvider(factory(model=checkpoint, device=device, **kwargs))
 
 
 def aimnet(model: str, device: str, **kwargs: Any) -> CalculatorProvider:
