@@ -76,18 +76,6 @@ def aimnet(model: str, device: str, **kwargs: Any) -> CalculatorProvider:
     return CalculatorProvider(per_structure=for_atoms)
 
 
-def ani(model: str, device: str, **kwargs: Any) -> CalculatorProvider:
-    try:
-        import torchani
-    except ImportError as error:
-        raise RuntimeError("Install/activate TorchANI for the ANI backend") from error
-    try:
-        model_factory = getattr(torchani.models, model)
-    except AttributeError as error:
-        raise ValueError(f"Unknown TorchANI model: {model!r} (for example ANI2x)") from error
-    return CalculatorProvider(model_factory(**kwargs).to(device).ase())
-
-
 def orb(model: str, device: str, **kwargs: Any) -> CalculatorProvider:
     try:
         from orb_models.forcefield import pretrained
@@ -105,27 +93,10 @@ def orb(model: str, device: str, **kwargs: Any) -> CalculatorProvider:
     )
 
 
-def mattersim(model: str, device: str, **kwargs: Any) -> CalculatorProvider:
-    try:
-        from mattersim.forcefield import MatterSimCalculator
-    except ImportError as error:
-        raise RuntimeError("Install/activate MatterSim for the MatterSim backend") from error
-    # The 1M checkpoint is MatterSim's default. For 5M, --checkpoint should be
-    # used because installations may store it in different locations.
-    checkpoint = kwargs.pop("checkpoint", None)
-    if model.lower() not in {"1m", "mattersim-1m", "default"} and checkpoint is None:
-        checkpoint = model
-    if checkpoint is not None:
-        kwargs["load_path"] = checkpoint
-    return CalculatorProvider(MatterSimCalculator(device=device, **kwargs))
-
-
 BACKENDS = {
     "aimnet": aimnet,
-    "ani": ani,
     "fairchem": fairchem,
     "mace": mace,
-    "mattersim": mattersim,
     "orb": orb,
 }
 

@@ -17,7 +17,12 @@ SAMPLE_REACTIONS = (1, 13, 20, 22, 31, 38, 42)
 SAMPLE_MODELS = (
     "B2GP-PLYP-D4", "esen-md-direct-all-omol", "uma-m-1p1", "aimnet2-nse", "gxtb"
 )
-COLORS = {"DFT": "#1e4d2b", "MLIP": "#2e86de", "Semiempirical": "#b45f06"}
+COLORS = {
+    "DFT": "#1e4d2b",
+    "MLIP": "#2e86de",
+    "Semiempirical tight-binding": "#b45f06",
+}
+LABELS = {"Semiempirical tight-binding": "Semi-empirical"}
 
 
 def rows(path: Path) -> list[dict[str, str]]:
@@ -37,7 +42,8 @@ def generate_scaled_pareto() -> None:
         selected = [(row, value) for row, value in zip(data, scaled) if row["model_category"] == category]
         axis.scatter(
             [float(row["average_run_time_seconds"]) for row, _ in selected],
-            [value for _, value in selected], s=55, color=color, alpha=0.82, label=category,
+            [value for _, value in selected], s=55, color=color, alpha=0.82,
+            label=LABELS.get(category, category),
             edgecolors="white", linewidths=0.5,
         )
     axis.set_xscale("log")
@@ -63,7 +69,7 @@ def generate_type_radars() -> None:
     keys = {
         "DFT": "dft_mae_{kind}_kcal_mol",
         "MLIP": "mlip_mae_{kind}_kcal_mol",
-        "Semiempirical": "semiempirical_mae_{kind}_kcal_mol",
+        "Semiempirical tight-binding": "semiempirical_mae_{kind}_kcal_mol",
     }
     for kind, title in (("thermo", "Thermodynamic"), ("kinetic", "Kinetic")):
         series = {
@@ -73,7 +79,10 @@ def generate_type_radars() -> None:
         radial_max = max(5, math.ceil(max(map(max, series.values())) / 5) * 5)
         figure, axis = plt.subplots(figsize=(7.2, 6.7), dpi=220, subplot_kw={"polar": True})
         for model_type, values in series.items():
-            axis.plot(closed, values + values[:1], color=COLORS[model_type], linewidth=2.4, label=model_type)
+            axis.plot(
+                closed, values + values[:1], color=COLORS[model_type], linewidth=2.4,
+                label=LABELS.get(model_type, model_type),
+            )
             axis.fill(closed, values + values[:1], color=COLORS[model_type], alpha=0.12)
         axis.set_xticks(angles)
         axis.set_xticklabels(CATEGORIES, fontsize=11)
