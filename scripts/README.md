@@ -157,8 +157,80 @@ The implementation modules are:
 These modules remain directly runnable when custom arguments are needed. Use
 `python3 scripts/<name>.py --help` for their input/output options.
 
+## Conformer study
+
+Data lives in `calculations/conformer_study/` (the "study directory"). Set
+`TRIP50_STUDY_DIR` to use a copy elsewhere, for example the full runs with
+trajectories kept outside the repository. Reference geometries and
+charge/multiplicity always come from `structures/reference/` and
+`configs/structure_metadata.csv`.
+
+| Order | Script | Reads | Writes |
+|---|---|---|---|
+| 1 | `make_reference_smiles_csv.py` | `reference_smiles/*.smi` | `reference_smiles.csv` |
+| – | AQME CSEARCH (external) | `reference_smiles.csv` | `reference_conformers/*.sdf` |
+| 2 | `run_conf_mlip_optimizations.py` | `conformer_xyz/` | `conformer_optimizations/`, `conformer_optimization_results/` |
+| 3 | `analyze_conformer_optimizations.py` | `conformer_optimizations/`, `optimizations/` | `conformer_analysis/*.csv` |
+| 4 | `make_ordered_best_conformers.py` | `conformer_optimizations/` | `best_conformers_ordered/` |
+
+### `make_reference_smiles_csv.py`
+
+Collects the non-TS SMILES (106 species) into `reference_smiles.csv`, sorted by
+reaction and role. The committed CSV was corrected by hand for 11-R1, 11-P2,
+49-R1 (azides), 50-R2 (diazo) and 20-P1 (sulfonyl), because Open Babel assigns
+no formal charges. The script exits if the CSV exists; pass `--force` to
+overwrite it.
+
+The conformers were made with AQME 2.0.1 (with its radical-bracket bug patched)
+and converted with `obabel <sdf> -O conformer_xyz/<species>.xyz`:
+
+```bash
+python -m aqme --csearch --input reference_smiles.csv --program rdkit \
+  --destination reference_conformers --auto_sample high --rms_threshold 0.1
+```
+
+### `run_conf_mlip_optimizations.py`
+
+ASE BFGS optimization of every conformer frame with each selected MLIP (fmax
+0.05 eV/Å, at most 500 steps, CUDA). Charge and multiplicity come from the
+metadata, never from the SDF. Conformers already marked completed in a model's
+results CSV are skipped. Uses `mlip_calculator_factories.py`.
+
+```bash
+python3 scripts/run_conf_mlip_optimizations.py --models uma-s-1p2 [--species 1-R1 3-R1]
+```
+
+`optimizations/<model>/<species>_optimized.xyz`, each model's optimization of
+the reference geometry, was produced by the separate geometry-robustness driver
+(not in this repository).
+
+### `analyze_conformer_optimizations.py`
+
+For each model and species, takes the lowest-energy optimized conformer and
+computes ΔE against the same model's optimized reference, plus the heavy-atom
+RMSD to the DFT reference (RDKit, atoms matched by bonding graph). Categories,
+first match wins: `rearranged`, `not_converged`, `linear_artifact`,
+`matches_reference` (|ΔE| ≤ 0.5 kcal/mol), `lower_than_reference`,
+`higher_than_reference`. Writes `conformer_table.csv`, `best_conformers.csv`,
+`model_summary.csv` and `species_consensus.csv`. `--models` limits the models.
+
+### `make_ordered_best_conformers.py`
+
+Writes each model's lowest-energy conformer as
+`best_conformers_ordered/<model>/<species>_conf<i>_ordered.xyz`, in the
+reference atom order and superimposed on the reference, so it overlays directly
+in PyMOL. No options.
+
+### DFT checks
+
+`dft_checks/` holds ORCA wB97M-V/def2-QZVPP single points on selected MLIP
+conformers, with the reference-geometry output at the same level
+(`*_reference_*`) for comparison. These are run by hand. The conformer runs
+include an SCF stability check (`STABPerform`); the reference runs do not.
+
 ## Dependencies
 
-Data processing uses the standard library. Figures require Matplotlib from the
-root `requirements.txt`. Calculation drivers additionally require ASE, the
-selected MLIP package, or the external `gxtb` executable.
+Data processing uses the standard library. Figures require Matplotlib. The
+conformer analysis requires RDKit and NumPy. Calculation drivers additionally
+require ASE, the selected MLIP package, or the external `gxtb` executable. All
+Python packages are listed in the root `requirements.txt`.
