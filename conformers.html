@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>TRIP50 Conformer Study</title>
+    <link rel="icon" type="image/jpeg" href="images/paton-lab-logo.jpeg">
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.css">
+    <script>
+        window.MathJax = {
+            tex: {
+                inlineMath: [["$", "$"], ["\\(", "\\)"]],
+                displayMath: [["$$", "$$"], ["\\[", "\\]"]],
+                processEscapes: true
+            },
+            options: {
+                skipHtmlTags: ["script", "noscript", "style", "textarea", "pre", "code"]
+            }
+        };
+    </script>
+    <script defer src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.datatables.net/2.0.8/js/dataTables.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+<header class="hero">
+    <nav class="navbar" aria-label="Primary navigation">
+        <img src="images/csu-logo.png" class="logo" alt="Colorado State University">
+        <div class="nav-title">
+            Benchmarking Kinetic and Thermodynamic Energetic Predictions for Triplet Reactivity
+            <div class="author">Russell Wolfe</div>
+        </div>
+        <a href="https://patonlab.com" target="_blank" rel="noopener">
+            <img src="images/paton-lab-logo.jpeg" class="logo" alt="Paton Research Group">
+        </a>
+    </nav>
+    <div class="hero-content">
+        <p>
+            This study tests whether Machine Learning Interatomic Potentials (MLIPs) can
+            recover the reference conformers of the TRIP50 structures when optimizations
+            start from automatically generated RDKit conformers instead of the reference
+            geometries.
+        </p>
+        <div class="buttons">
+            <a href="https://github.com/Russellwolfe0/TRIP50-benchmarking" class="button" target="_blank" rel="noopener">GitHub</a>
+            <a href="index.html" class="button">Energy benchmark</a>
+            <a href="#results" class="button">View results</a>
+        </div>
+    </div>
+</header>
+
+<main>
+    <section id="overview">
+        <h2>Overview</h2>
+        <p>
+            The <a href="index.html">energy benchmark</a> evaluates every method on the same
+            fixed reference geometries from the TRIP50 data set.<sup><a href="#ref1">[1]</a></sup>
+            In practice, a model is usually given a structure that has not been optimized at a
+            high level of theory, and it must find a low-energy conformer on its own. This study
+            asks whether the 16 MLIPs from the energy benchmark do that reliably for open-shell
+            species.
+        </p>
+        <p>
+            Every non-transition-state species (106 of the 156 structures) was converted to a
+            SMILES string, a conformer ensemble was generated from it, and each conformer was
+            optimized with each MLIP. The lowest-energy result was then compared with the same
+            model's optimization of the reference geometry.
+        </p>
+    </section>
+
+    <section id="methods">
+        <h2>Methods</h2>
+        <h3>Conformer generation</h3>
+        <p>
+            SMILES strings were generated from the reference XYZ geometries with Open
+            Babel<sup><a href="#ref4">[4]</a></sup> and checked against the reference formulas
+            and multiplicities. Five species needed manual correction because Open Babel does
+            not assign formal charges: the azides (11-R1, 11-P2, 49-R1), the diazo ester 50-R2
+            and the PhSO<sub>2</sub>&bull; radical 20-P1. Conformers were generated with the
+            CSEARCH module of AQME<sup><a href="#ref2">[2]</a></sup> using
+            RDKit<sup><a href="#ref3">[3]</a></sup>, giving 553 conformers across 106 species
+            (median 2 per species, maximum 25).
+        </p>
+        <p>
+            SMILES strings do not carry spin. Thirteen species are triplet excited states of
+            closed-shell molecules, so charge and multiplicity for every optimization were
+            taken from the TRIP50 metadata, not from the conformer files.
+        </p>
+
+        <h3>MLIP optimizations</h3>
+        <p>
+            Each conformer was optimized with each of the 16 MLIPs using the BFGS optimizer in
+            ASE<sup><a href="#ref5">[5]</a></sup> (maximum force 0.05 eV/&Aring;, at most 500
+            steps). Each model also optimized the original reference geometry, giving that
+            model's own reference energy.
+        </p>
+
+        <h3>Comparison with the reference</h3>
+        <p>
+            MLIP energies are only meaningful as differences within one model, so each model's
+            best conformer is compared with that model's optimized reference:
+        </p>
+        <p>$$\Delta E = E_{\text{best conformer}} - E_{\text{optimized reference}}$$</p>
+        <p>
+            Heavy-atom RMSD to the DFT reference was computed with RDKit after matching atoms
+            by bonding graph. Each model and species is assigned one category, in this order:
+        </p>
+        <div class="table-scroll">
+            <table>
+                <thead><tr><th>Category</th><th>Rule</th></tr></thead>
+                <tbody>
+                    <tr><td>Rearranged</td><td>Bonding pattern (including H) differs from the reference</td></tr>
+                    <tr><td>Not converged</td><td>Best conformer did not reach 0.05 eV/&Aring;</td></tr>
+                    <tr><td>Linear artifact</td><td>More near-linear (&gt;170&deg;) two-coordinate heavy-atom centres than the reference</td></tr>
+                    <tr><td>Matches reference</td><td>$|\Delta E| \le 0.5$ kcal/mol</td></tr>
+                    <tr><td>Lower than reference</td><td>$\Delta E &lt; -0.5$ kcal/mol</td></tr>
+                    <tr><td>Higher than reference</td><td>$\Delta E &gt; +0.5$ kcal/mol (reference conformer not recovered)</td></tr>
+                </tbody>
+            </table>
+        </div>
+
+        <h3>DFT checks</h3>
+        <p>
+            Where models found conformers below the reference, single points were run on the
+            MLIP geometry and the reference geometry at &omega;B97M-V<sup><a href="#ref6">[6]</a></sup>/def2-QZVPP<sup><a href="#ref7">[7]</a></sup>
+            in ORCA.<sup><a href="#ref8">[8]</a></sup>
+        </p>
+    </section>
+
+    <section id="results">
+        <h2>Results</h2>
+        <h3>Reference recovery by model</h3>
+        <p>
+            Percentage of the 106 species whose best conformer matches the reference, with the
+            number of species in each other category. The table loads from
+            <code>calculations/conformer_study/conformer_analysis/model_summary.csv</code>.
+        </p>
+        <p id="conformer-model-status" class="load-status" aria-live="polite">Loading conformer results…</p>
+        <div class="table-scroll">
+            <table id="conformer-model-table" class="display">
+                <thead><tr>
+                    <th>Model</th><th>% match</th><th>Lower</th><th>Higher</th>
+                    <th>Linear</th><th>Not converged</th><th>Rearranged</th><th>Conformers converged</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <h3>Results by species</h3>
+        <p>
+            How many of the 16 models recover each species, and the range of $\Delta E$
+            (kcal/mol) across models. Sorted by fewest matches.
+        </p>
+        <p id="conformer-species-status" class="load-status" aria-live="polite">Loading species results…</p>
+        <div class="table-scroll">
+            <table id="conformer-species-table" class="display">
+                <thead><tr>
+                    <th>Species</th><th>Multiplicity</th><th>Conformers</th><th>Models matching</th>
+                    <th>Models lower</th><th>Models higher</th><th>Min $\Delta E$</th><th>Mean $\Delta E$</th>
+                </tr></thead>
+                <tbody></tbody>
+            </table>
+        </div>
+
+        <h3>DFT checks of lower-energy conformers</h3>
+        <p>
+            &omega;B97M-V/def2-QZVPP single points on the MLIP's best conformer and on the
+            reference geometry, in kcal/mol.
+        </p>
+        <div class="table-scroll">
+            <table>
+                <thead><tr>
+                    <th>Species</th><th>Multiplicity</th><th>MLIP</th><th>MLIP $\Delta E$</th>
+                    <th>DFT $\Delta E$</th><th>Outcome</th>
+                </tr></thead>
+                <tbody>
+                    <tr><td>41-P1</td><td>2</td><td>POLAR-1-l</td><td>&minus;3.79</td><td>&minus;3.76</td><td>Lower conformer confirmed</td></tr>
+                    <tr><td>24-P1</td><td>3</td><td>AllScAIP-MD conserving</td><td>&minus;1.65</td><td>&minus;1.74</td><td>Lower conformer confirmed</td></tr>
+                    <tr><td>41-R1</td><td>3</td><td>POLAR-1-l</td><td>&minus;2.93</td><td>+1.06</td><td>MLIP error</td></tr>
+                    <tr><td>24-R1</td><td>3</td><td>AllScAIP-MD conserving</td><td>&minus;6.86</td><td>+4.14</td><td>MLIP error</td></tr>
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section id="discussion">
+        <h2>Discussion</h2>
+        <p>
+            Fifteen of the 16 MLIPs recover the reference conformer for 62&ndash;74% of species,
+            with AllScAIP-MD conserving (73.6%) and POLAR-1-l (72.6%) highest. eSEN-SM direct is
+            the outlier at 49.1%: 244 of its 553 conformer optimizations did not converge. Its
+            forces come from a separate output head rather than the gradient of the energy, and
+            the noise in them prevents BFGS from settling.
+        </p>
+        <p>
+            Most failures share a few causes. Force-field starting geometries build some
+            two-coordinate radical centres, such as acyl radicals, exactly linear, and BFGS
+            started from that symmetric geometry stays on the saddle point. Some multi-conformer
+            species were not sampled close to the reference conformer. Species below the
+            reference are either real lower conformers or MLIP errors, and only a higher-level
+            check can tell them apart.
+        </p>
+        <p>
+            The DFT checks show both cases. For 41-P1 and 24-P1 the MLIPs agree with DFT to
+            within 0.1 kcal/mol, so the TRIP50 reference geometries are not the lowest
+            conformers of those species. For 41-P1 the reference is the Z allyl radical
+            connected to the C&ndash;Cl cleavage transition state, while the MLIPs find the E
+            allyl. For 41-R1 and 24-R1 the MLIP conformers are higher than the reference at DFT,
+            so the MLIP preference is an error. The reference single points did not include an
+            SCF stability check.
+        </p>
+    </section>
+
+    <section id="references">
+        <h2>References</h2>
+        <ol>
+            <li id="ref1">William B. Hughes, Mihai V. Popescu, Robert S. Paton; Fundamental Study of Density Functional Theory Applied to Triplet State Reactivity: Introduction of the TRIP50 Data Set. <i>J. Chem. Theory Comput.</i> 2026, 22, 3530–3542. <a href="https://doi.org/10.1021/acs.jctc.6c00144">https://doi.org/10.1021/acs.jctc.6c00144</a></li>
+            <li id="ref2">Alegre-Requena, J. V.; Sowndarya S. V., S.; Pérez-Soto, R.; Alturaiki, T. M.; Paton, R. S. AQME: Automated quantum mechanical environments for researchers and educators. <i>WIREs Comput. Mol. Sci.</i> 2023, 13, e1663. <a href="https://doi.org/10.1002/wcms.1663">https://doi.org/10.1002/wcms.1663</a></li>
+            <li id="ref3">RDKit: Open-source cheminformatics. <a href="https://www.rdkit.org">https://www.rdkit.org</a></li>
+            <li id="ref4">O'Boyle, N. M. et al. Open Babel: An open chemical toolbox. <i>J. Cheminform.</i> 2011, 3, 33. <a href="https://doi.org/10.1186/1758-2946-3-33">https://doi.org/10.1186/1758-2946-3-33</a></li>
+            <li id="ref5">Larsen, A. H. et al. The atomic simulation environment—a Python library for working with atoms. <i>J. Phys.: Condens. Matter</i> 2017, 29, 273002. <a href="https://doi.org/10.1088/1361-648X/aa680e">https://doi.org/10.1088/1361-648X/aa680e</a></li>
+            <li id="ref6">Narbe Mardirossian, Martin Head-Gordon; &omega;B97M-V: A combinatorially optimized, range-separated hybrid, meta-GGA density functional with VV10 nonlocal correlation. <i>J. Chem. Phys.</i> 2016, 144, 214110. <a href="https://doi.org/10.1063/1.4952647">https://doi.org/10.1063/1.4952647</a></li>
+            <li id="ref7">Florian Weigend, Reinhart Ahlrichs; Balanced basis sets of split valence, triple zeta valence and quadruple zeta valence quality for H to Rn. <i>Phys. Chem. Chem. Phys.</i> 2005, 7, 3297–3305. <a href="https://doi.org/10.1039/b508541a">https://doi.org/10.1039/b508541a</a></li>
+            <li id="ref8">Neese, F. Software Update: The ORCA Program System—Version 6.0. <i>WIREs Comput. Mol. Sci.</i> 2025, 15, e70019. <a href="https://doi.org/10.1002/wcms.70019">https://doi.org/10.1002/wcms.70019</a></li>
+        </ol>
+    </section>
+</main>
+
+<footer>
+    <p>TRIP50 benchmarking workflow · Paton Research Group · Colorado State University</p>
+</footer>
+<script src="conformers.js"></script>
+</body>
+</html>

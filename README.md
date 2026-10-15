@@ -24,7 +24,9 @@ data/final/           Benchmark tables
 images/               Website and publication figures
 scripts/              Drivers, parsers, analysis and plotting
 structures/reference/ Reference XYZ geometries
-index.html, script.js, style.css   Website
+index.html, script.js     Website: energy benchmark
+conformers.html, conformers.js   Website: conformer study
+style.css                 Shared website styles
 ```
 
 ## Energy benchmark
