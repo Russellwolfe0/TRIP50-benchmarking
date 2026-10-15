@@ -72,8 +72,8 @@ exits 1 if the set is incomplete.
 
 Parses ORCA and Q-Chem `*.out` files beneath
 `calculations/single_points/raw_outputs/<functional>/`. Writes energies,
-completion status, timing, processor count, and provenance to
-`data/intermediate/dft_spe_results.csv`. Q-Chem CPU time is reported directly;
+completion status, timing, processor count, and the program and source output
+file for each value to `data/intermediate/dft_spe_results.csv`. Q-Chem CPU time is reported directly;
 ORCA CPU time is estimated from run time and `%pal nprocs`. No options.
 
 ### `mlip_parser.py`
